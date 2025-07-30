@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente de Atendimento</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Conteúdo de demonstração */
+        .demo-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            text-align: center;
+        }
+
+        .demo-content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Container do botão flutuante */
+        .floating-chat-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        /* Textos dinâmicos */
+        .dynamic-text {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dynamic-text.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dynamic-text::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 20px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #667eea;
+        }
+
+        /* Botão flutuante */
+        .floating-btn {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 30px rgba(238, 90, 36, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 40px rgba(238, 90, 36, 0.6);
+        }
+
+        .floating-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .floating-btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-icon {
+            width: 24px;
+            height: 24px;
+            fill: white;
+            transition: transform 0.3s ease;
+        }
+
+        .floating-btn.active .btn-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Modal do formulário */
+        .chat-modal {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 350px;
+            max-height: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px) scale(0.9);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-modal.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .modal-header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        /* Responsivo */
+        @media (max-width: 480px) {
+            .chat-modal {
+                width: calc(100vw - 40px);
+                right: 20px;
+                left: 20px;
+                bottom: 100px;
+            }
+
+            .floating-chat-container {
+                right: 20px;
+                bottom: 20px;
+            }
+        }
+
+        /* Animação de pulso */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 8px 30px rgba(238, 90, 36, 0.4);
+            }
+            50% {
+                box-shadow: 0 8px 30px rgba(238, 90, 36, 0.6), 0 0 0 10px rgba(238, 90, 36, 0.1);
+            }
+            100% {
+                box-shadow: 0 8px 30px rgba(238, 90, 36, 0.4);
+            }
+        }
+
+        .floating-btn.pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Status de envio */
+        .sending {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .sending::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Conteúdo de demonstração -->
+    <div class="demo-content">
+        <h1>🚀 Demo - Agente de Atendimento</h1>
+        <p>Esta é uma demonstração da interface de atendimento com integração n8n. O botão flutuante no canto inferior direito permite que os visitantes entrem em contato rapidamente.</p>
+        <br>
+        <p>Scroll pela página e observe as mensagens dinâmicas que aparecem no botão!</p>
+    </div>
+
+    <!-- Interface de Chat Flutuante -->
+    <div class="floating-chat-container">
+        <!-- Textos dinâmicos -->
+        <div class="dynamic-text" id="dynamicText">
+            👋 Precisa de ajuda?
+        </div>
+
+        <!-- Botão flutuante -->
+        <button class="floating-btn pulse" id="floatingBtn">
+            <svg class="btn-icon" viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+            </svg>
+        </button>
+
+        <!-- Modal do formulário -->
+        <div class="chat-modal" id="chatModal">
+            <div class="modal-header">
+                <button class="close-btn" id="closeBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+                <h3>💬 Fale Conosco</h3>
+                <p>Preencha os dados abaixo e entraremos em contato!</p>
+            </div>
+            <div class="modal-body">
+                <form id="contactForm">
+                    <div class="form-group">
+                        <label for="name">Nome Completo</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Telefone/WhatsApp</label>
+                        <input type="tel" class="form-control" id="phone" name="phone">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="service">Tipo de Serviço</label>
+                        <select class="form-control" id="service" name="service" required>
+                            <option value="">Selecione um serviço</option>
+                            <option value="consultoria">Consultoria</option>
+                            <option value="desenvolvimento">Desenvolvimento</option>
+                            <option value="suporte">Suporte Técnico</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">Mensagem</label>
+                        <textarea class="form-control" id="message" name="message" placeholder="Descreva como podemos ajudá-lo..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        Enviar Mensagem
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const floatingBtn = document.getElementById('floatingBtn');
+        const chatModal = document.getElementById('chatModal');
+        const closeBtn = document.getElementById('closeBtn');
+        const dynamicText = document.getElementById('dynamicText');
+        const contactForm = document.getElementById('contactForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Textos dinâmicos que aparecem no botão
+        const messages = [
+            '👋 Precisa de ajuda?',
+            '💬 Fale conosco agora!',
+            '🚀 Agende uma reunião',
+            '⭐ Tire suas dúvidas',
+            '📞 Atendimento online',
+            '💡 Como podemos ajudar?'
+        ];
+
+        let currentMessageIndex = 0;
+        let messageInterval;
+
+        // Função para mostrar textos dinâmicos
+        function showDynamicMessages() {
+            messageInterval = setInterval(() => {
+                dynamicText.classList.remove('show');
+                
+                setTimeout(() => {
+                    currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+                    dynamicText.textContent = messages[currentMessageIndex];
+                    dynamicText.classList.add('show');
+                }, 300);
+            }, 3000);
+        }
+
+        // Iniciar mensagens dinâmicas
+        setTimeout(() => {
+            dynamicText.classList.add('show');
+            showDynamicMessages();
+        }, 1000);
+
+        // Event listeners
+        floatingBtn.addEventListener('click', () => {
+            chatModal.classList.toggle('show');
+            floatingBtn.classList.toggle('active');
+            
+            if (chatModal.classList.contains('show')) {
+                dynamicText.classList.remove('show');
+                clearInterval(messageInterval);
+            } else {
+                setTimeout(() => {
+                    dynamicText.classList.add('show');
+                    showDynamicMessages();
+                }, 500);
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            chatModal.classList.remove('show');
+            floatingBtn.classList.remove('active');
+            
+            setTimeout(() => {
+                dynamicText.classList.add('show');
+                showDynamicMessages();
+            }, 500);
+        });
+
+        // Fechar modal clicando fora
+        document.addEventListener('click', (e) => {
+            if (!chatModal.contains(e.target) && !floatingBtn.contains(e.target)) {
+                if (chatModal.classList.contains('show')) {
+                    chatModal.classList.remove('show');
+                    floatingBtn.classList.remove('active');
+                    
+                    setTimeout(() => {
+                        dynamicText.classList.add('show');
+                        showDynamicMessages();
+                    }, 500);
+                }
+            }
+        });
+
+        // Envio do formulário
+        contactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Adicionar estado de loading
+            submitBtn.classList.add('sending');
+            submitBtn.textContent = 'Enviando...';
+            
+            // Coletar dados do formulário
+            const formData = new FormData(contactForm);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Adicionar timestamp
+            data.timestamp = new Date().toISOString();
+            data.source = 'Website Contact Form';
+
+            try {
+                // SUBSTITUIR ESTA URL PELA SUA URL DO WEBHOOK N8N
+                const n8nWebhookUrl = 'https://sua-instancia-n8n.com/webhook/contact-form';
+                
+                const response = await fetch(n8nWebhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    // Sucesso
+                    submitBtn.textContent = '✅ Enviado com sucesso!';
+                    submitBtn.style.background = 'linear-gradient(135deg, #10ac84, #00d2d3)';
+                    
+                    // Limpar formulário
+                    contactForm.reset();
+                    
+                    // Fechar modal após 2 segundos
+                    setTimeout(() => {
+                        chatModal.classList.remove('show');
+                        floatingBtn.classList.remove('active');
+                        resetSubmitButton();
+                        
+                        setTimeout(() => {
+                            dynamicText.classList.add('show');
+                            showDynamicMessages();
+                        }, 500);
+                    }, 2000);
+                    
+                } else {
+                    throw new Error('Erro no envio');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao enviar:', error);
+                submitBtn.textContent = '❌ Erro no envio. Tente novamente.';
+                submitBtn.style.background = 'linear-gradient(135deg, #ff6b6b, #ee5a24)';
+                
+                setTimeout(resetSubmitButton, 3000);
+            }
+        });
+
+        function resetSubmitButton() {
+            submitBtn.classList.remove('sending');
+            submitBtn.textContent = 'Enviar Mensagem';
+            submitBtn.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        }
+
+        // Formatação automática do telefone
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                value = value.replace(/(\d{2})(\d{1})/, '($1) $2');
+                e.target.value = value;
+            }
+        });
+    </script>
+</body>
+</html>
